@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import './InputBox.css';
 
-import './App.css';
 function InputBox() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');

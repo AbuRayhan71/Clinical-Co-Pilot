@@ -7,7 +7,7 @@ function App() {
     <div className="App-header">
       <h1>Welcome to Clinical Co-Pilot by Cavari</h1>
       <p>Your AI MED assistant for smarter, faster clinical workflows.</p>
-      <InputBox />
+      <InputBox /> {/* add your component here */}
     </div>
   );
 }

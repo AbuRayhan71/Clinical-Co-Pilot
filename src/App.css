@@ -43,31 +43,3 @@
   margin-top: 1em;
   cursor: pointer;
 }
-.input-form {
-  margin: 2rem 0;
-}
-
-.input-field {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  margin-right: 1rem;
-}
-
-.submit-button {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  border-radius: 4px;
-  border: none;
-  background: #fff;
-  cursor: pointer;
-}
-
-.output-container {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: #222;
-  border-radius: 8px;
-  color: #fff;
-}
