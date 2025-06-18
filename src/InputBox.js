@@ -8,7 +8,7 @@ function InputBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiKey = process.env.REACT_APP_GROQ_API_KEY;
+  const apiKey = process.env.REACT_APP_GROQ_API;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
