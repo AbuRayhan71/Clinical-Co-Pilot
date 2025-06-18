@@ -129,7 +129,13 @@ function InputBox() {
         className="input-field"
       />
       <button type="submit" className="submit-button" disabled={loading}>
-        {loading ? 'Processing...' : 'Submit'}
+        {loading ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+            <span className="ai-spinner"></span> Generating...
+          </span>
+        ) : (
+          'Generate Medical Prescription'
+        )}
       </button>
       {error && <div className="output-container">{error}</div>}
       {parsedData
