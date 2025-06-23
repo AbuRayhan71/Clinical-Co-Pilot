@@ -8,7 +8,7 @@ function InputBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiKey = process.env.REACT_APP_GROQ_API;
+  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,10 +17,9 @@ function InputBox() {
     setOutput('');
     setParsedData(null);
 
-    const prompt = `
+    const systemPrompt = `
     You are a clinical note formatter.
     Given the following doctor note, extract the relevant information in this format:
-
     {
       "patientId": "string",
       "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
@@ -37,41 +36,41 @@ function InputBox() {
       },
       "noteFormatted": "Cleaned-up clinical note text.",
       "metadata": {
-        "model": "grok‑v1",
+        "model": "gpt-4o",
         "responseTimeMs": 123,
         "confidenceScore": 0.87
       }
-    }
-
-    Here is the doctor note:
-    ${input}
-    `;
+    }`;
 
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "gpt-4o",
           messages: [
             {
+              role: "system",
+              content: systemPrompt
+            },
+            {
               role: "user",
-              content: prompt
+              content: input
             }
           ]
         })
       });
 
-      if (!response.ok) throw new Error('API error');
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`API error: ${response.status} ${errorBody}`);
+      }
       const data = await response.json();
 
-      // Step 1: Extract the JSON block from the output
       let content = data.choices[0].message.content;
-
-      // Find the first {...} JSON block (even if inside ``` or with extra text)
       let jsonMatch = content.match(/```(?:json)?\s*([\s\S]+?)\s*```/) || content.match(/{[\s\S]+}/);
       let jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : null;
 
@@ -80,13 +79,13 @@ function InputBox() {
           const json = JSON.parse(jsonStr);
           setParsedData(json);
         } catch (e) {
-          setOutput(content); // If parsing fails, fallback to plain output
+          setOutput(content);
         }
       } else {
-        setOutput(content); // If no JSON found, fallback to plain output
+        setOutput(content);
       }
     } catch (err) {
-      setError('Failed to process note. Please try again.');
+      setError(`Failed to process note. Please check your setup. Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
