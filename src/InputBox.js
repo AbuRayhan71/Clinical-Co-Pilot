@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './InputBox.css';
 
+
 function InputBox() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
@@ -8,7 +9,10 @@ function InputBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+  const apiKey = process.env.REACT_APP_AZURE_OPENAI_API_KEY;
+  const endpoint = process.env.REACT_APP_AZURE_OPENAI_ENDPOINT;
+  const deployment = process.env.REACT_APP_AZURE_OPENAI_DEPLOYMENT_NAME;
+  const apiVersion = process.env.REACT_APP_AZURE_OPENAI_API_VERSION;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,15 +46,16 @@ function InputBox() {
       }
     }`;
 
+    const fullApiUrl = `${endpoint}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(fullApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'api-key': apiKey
         },
         body: JSON.stringify({
-          model: "gpt-4o",
           messages: [
             {
               role: "system",

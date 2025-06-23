@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders Clinical Co-Pilot title', () => {
+test('renders AI-Powered Medical Notes Generator title', () => {
   render(<App />);
-  const titleElement = screen.getByText(/Welcome to Clinical Co-Pilot/i);
+  const titleElement = screen.getByText(/AI-Powered Medical Notes Generator/i);
   expect(titleElement).toBeInTheDocument();
 });
 
