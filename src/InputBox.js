@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './InputBox.css';
 
 
@@ -8,6 +8,9 @@ function InputBox() {
   const [parsedData, setParsedData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const apiKey = process.env.REACT_APP_AZURE_OPENAI_API_KEY;
   const endpoint = process.env.REACT_APP_AZURE_OPENAI_ENDPOINT;
@@ -22,29 +25,41 @@ function InputBox() {
     setParsedData(null);
 
     const systemPrompt = `
-    You are a clinical note formatter.
-    Given the following doctor note, extract the relevant information in this format:
-    {
-      "patientId": "string",
-      "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
-      "summary": {
-        "chiefComplaint": "Short one‑line summary",
-        "history": "Concise history of present problem",
-        "keyFindings": ["finding1", "finding2"],
-        "differentialDiagnoses": [
-          {"diagnosis": "Diagnosis A", "confidence": "High"},
-          {"diagnosis": "Diagnosis B", "confidence": "Medium"}
-        ],
-        "recommendedActions": ["Action1", "Action2"],
-        "redFlags": ["Flag1", "Flag2"]
-      },
-      "noteFormatted": "Cleaned-up clinical note text.",
-      "metadata": {
-        "model": "gpt-4o",
-        "responseTimeMs": 123,
-        "confidenceScore": 0.87
-      }
-    }`;
+// Multilingual ED Assistant Prompt (UNSW Research Prototype)
+// Objective: Support bilingual patients and triage nurses using the Australian Triage Scale (ATS)
+//
+// Input: Patient symptoms in Bengali, Hindi, Arabic, or English.
+//
+// AI Task:
+// 1. Detect the input language.
+// 2. Translate to plain English if needed.
+// 3. Summarize symptoms.
+// 4. Identify key clinical indicators.
+// 5. Recommend ATS triage level (1–5).
+//
+// Output Format:
+// - Detected Language: [Bengali / Hindi / Arabic / English]
+// - Translated English Summary: [summary]
+// - Clinical Indicators: [list]
+// - Suggested Triage Level (ATS 1–5): [level]
+// - Explanation: [brief clinical justification]
+//
+// ATS 1 = Immediate care (life-threatening)
+// ATS 2 = Emergency (within 10 min)
+// ATS 3 = Urgent (within 30 min)
+// ATS 4 = Semi-urgent (within 60 min)
+// ATS 5 = Non-urgent (within 120 min)
+//
+// Example Input (Arabic):  صداع شديد ودوخة بعد السقوط
+// Example Output:
+// - Detected Language: Arabic
+// - Translated English Summary: Severe headache and dizziness after a fall
+// - Clinical Indicators: Headache, Dizziness, Recent Fall
+// - Suggested Triage Level (ATS): 3
+// - Explanation: Neurological symptoms following trauma require assessment within 30 minutes.
+//
+// Context: Prototype for UNSW research to improve ED communication and triage for culturally and linguistically diverse patients.
+    `;
 
     const fullApiUrl = `${endpoint}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
 
@@ -96,6 +111,53 @@ function InputBox() {
     }
   };
 
+  // Voice recording logic
+  const handleMicClick = async () => {
+    if (recording) {
+      // Stop recording
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new window.MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          // Send audioBlob to backend for transcription
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          setLoading(true);
+          setError('');
+          try {
+            const resp = await fetch('http://localhost:5005/transcribe', {
+              method: 'POST',
+              body: formData
+            });
+            if (!resp.ok) throw new Error('Transcription failed');
+            const data = await resp.json();
+            setInput(data.text);
+          } catch (err) {
+            setError('Voice transcription failed: ' + err.message);
+          } finally {
+            setLoading(false);
+          }
+        };
+        mediaRecorder.start();
+        setRecording(true);
+      } catch (err) {
+        setError('Microphone access denied or not available.');
+      }
+    }
+  };
+
   // Helper: display in a nice format
   function renderParsedData(data) {
     if (!data) return null;
@@ -125,13 +187,25 @@ function InputBox() {
 
   return (
     <form onSubmit={handleSubmit} className="input-form">
-      <input
-        type="text"
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        placeholder="Type your input here"
-        className="input-field"
-      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Type your input here or use the mic"
+          className="input-field"
+        />
+        <button
+          type="button"
+          onClick={handleMicClick}
+          className={recording ? 'mic-button recording' : 'mic-button'}
+          style={{ background: recording ? '#ff5252' : '#eee', border: 'none', borderRadius: '50%', width: 40, height: 40 }}
+          title={recording ? 'Stop Recording' : 'Start Recording'}
+          disabled={loading}
+        >
+          {recording ? '■' : '🎤'}
+        </button>
+      </div>
       <button type="submit" className="submit-button" disabled={loading}>
         {loading ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
